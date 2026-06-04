@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<script>document.documentElement.className=document.documentElement.className.replace('no-js','js');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collidian — Marine Collision Avoidance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#081726;
+  --navy-800:#0d2438;
+  --navy-700:#12324c;
+  --navy-600:#1b3a6b;
+  --teal:#17b89a;
+  --teal-dim:#0e7a66;
+  --coral:#ff6b5c;
+  --amber:#f5a623;
+  --ice:#cfe4ef;
+  --mist:#7c98ac;
+  --line:rgba(120,170,200,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Sora',sans-serif;
+  background:var(--navy-900);
+  color:var(--ice);
+  overflow-x:hidden;
+  line-height:1.6;
+}
+.mono{font-family:'Space Mono',monospace}
+
+/* ---------- NAV ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 40px;
+  background:rgba(8,23,38,.72);
+  -webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .logo-badge{background:#f4f6f8;border-radius:11px;padding:6px 9px;display:flex;align-items:center;flex-shrink:0;box-shadow:0 2px 10px -2px rgba(0,0,0,.35)}
+.brand svg{width:50px;height:38px;flex-shrink:0;display:block}
+.brand .name{font-weight:600;font-size:1.4rem;letter-spacing:-.5px}
+.brand .name span{color:var(--teal)}
+.nav-links{display:flex;gap:30px;align-items:center}
+.nav-links a{color:var(--mist);text-decoration:none;font-size:.9rem;transition:color .2s}
+.nav-links a:hover{color:var(--ice)}
+.nav-cta{
+  background:var(--teal);color:#000;
+  padding:9px 20px;border-radius:8px;font-weight:600;font-size:.9rem;
+  text-decoration:none;transition:transform .2s,background .2s;
+}
+.nav-cta:hover{background:#1ed3b0;transform:translateY(-1px)}
+@media(max-width:780px){.nav-links{display:none}nav{padding:16px 20px}}
+
+/* ---------- HERO ---------- */
+.hero{
+  min-height:100vh;
+  display:grid;grid-template-columns:1.05fr 1fr;gap:40px;
+  align-items:center;
+  padding:120px 40px 60px;
+  max-width:1400px;margin:0 auto;
+  position:relative;
+}
+@media(max-width:980px){.hero{grid-template-columns:1fr;text-align:center}}
+
+.hero-copy{position:relative;z-index:2}
+.tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--teal);
+  border:1px solid var(--teal-dim);border-radius:30px;
+  padding:6px 14px;margin-bottom:26px;
+}
+.tag .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.hero h1{
+  font-size:clamp(2.4rem,5vw,4rem);font-weight:700;line-height:1.05;
+  letter-spacing:-1.5px;color:#fff;margin-bottom:22px;
+}
+.hero h1 em{font-style:normal;color:var(--teal);position:relative}
+.hero p.lead{font-size:1.12rem;color:var(--mist);max-width:480px;margin-bottom:34px}
+@media(max-width:980px){.hero p.lead{margin-inline:auto}}
+
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap}
+@media(max-width:980px){.hero-actions{justify-content:center}}
+.btn-primary{
+  background:var(--teal);color:#000;
+  padding:14px 28px;border-radius:10px;font-weight:600;font-size:1rem;
+  text-decoration:none;transition:transform .2s,box-shadow .2s;
+  box-shadow:0 8px 30px -8px rgba(23,184,154,.6);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 36px -8px rgba(23,184,154,.7)}
+.btn-ghost{
+  color:var(--ice);border:1px solid var(--line);
+  padding:14px 28px;border-radius:10px;font-weight:500;font-size:1rem;
+  text-decoration:none;transition:border-color .2s,background .2s;
+}
+.btn-ghost:hover{border-color:var(--teal);background:rgba(23,184,154,.08)}
+
+.stats{display:flex;gap:36px;margin-top:48px}
+@media(max-width:980px){.stats{justify-content:center}}
+.stat .num{font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;color:#fff}
+.stat .num b{color:var(--teal);font-weight:700}
+.stat .lab{font-size:.78rem;color:var(--mist);letter-spacing:.5px}
+
+/* ---------- RADAR SCOPE ---------- */
+.scope-wrap{position:relative;z-index:2;display:flex;justify-content:center}
+.scope{
+  position:relative;width:min(480px,90vw);aspect-ratio:1;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at center, var(--navy-700) 0%, var(--navy-800) 55%, var(--navy-900) 100%);
+  border:1px solid rgba(23,184,154,.25);
+  box-shadow:inset 0 0 80px rgba(0,0,0,.6),0 0 60px -20px rgba(23,184,154,.4);
+  overflow:hidden;
+}
+.ring{position:absolute;border:1px solid rgba(124,170,200,.12);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.cross{position:absolute;background:rgba(124,170,200,.1)}
+.cross.h{top:50%;left:0;right:0;height:1px}
+.cross.v{left:50%;top:0;bottom:0;width:1px}
+.sweep-canvas{
+  position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;
+  z-index:1;pointer-events:none;
+}
+
+/* vessels */
+.vessel{position:absolute;transform:translate(-50%,-50%);z-index:3}
+.vessel .hull{
+  width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;
+  border-bottom:20px solid currentColor;filter:drop-shadow(0 0 6px currentColor);
+}
+.vessel.own{z-index:5}
+.vessel.own .hull{
+  border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:26px solid var(--teal);
+  filter:drop-shadow(0 0 12px rgba(23,184,154,.9));
+}
+.vessel .ping{
+  position:absolute;top:50%;left:50%;width:14px;height:14px;border-radius:50%;
+  border:1.5px solid currentColor;transform:translate(-50%,-50%);
+  animation:ping 2.4s ease-out infinite;opacity:0;
+}
+@keyframes ping{0%{width:14px;height:14px;opacity:.9}100%{width:70px;height:70px;opacity:0}}
+.v-safe{color:var(--teal)}
+.v-warn{color:var(--amber)}
+.v-danger{color:var(--coral)}
+
+/* threat line */
+.threat{position:absolute;top:50%;left:50%;height:2px;transform-origin:left center;z-index:2;
+  background:linear-gradient(90deg,var(--coral),rgba(255,107,92,0));border-radius:2px}
+.threat.warn{background:linear-gradient(90deg,var(--amber),rgba(245,166,35,0))}
+
+.label{
+  position:absolute;transform:translate(-50%,-50%);z-index:6;
+  font-family:'Space Mono',monospace;font-size:.6rem;white-space:nowrap;
+  padding:2px 6px;border-radius:4px;background:rgba(8,23,38,.82);
+  border:1px solid currentColor;letter-spacing:.5px;
+}
+
+.scope-cta{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  font-family:'Space Mono',monospace;font-size:.62rem;color:var(--mist);
+  letter-spacing:1.5px;text-transform:uppercase;z-index:7}
+
+/* big centered collision-alarm banner (bottom of the radar) */
+.collision-banner{
+  position:absolute;left:50%;bottom:-58px;transform:translateX(-50%) scale(.96);
+  z-index:9;display:flex;align-items:center;gap:12px;
+  padding:13px 26px;border-radius:12px;white-space:nowrap;
+  background:rgba(40,8,8,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  border:2px solid var(--coral);
+  box-shadow:0 0 28px -4px rgba(255,107,92,.7),inset 0 0 18px -6px rgba(255,107,92,.5);
+  color:#fff;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  font-size:clamp(1rem,2vw,1.5rem);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .3s ease,visibility .3s ease,transform .3s ease;
+}
+.collision-banner.on{opacity:1;visibility:visible;animation:alarmFlash 1s steps(1,end) infinite}
+@keyframes alarmFlash{0%,100%{opacity:1}50%{opacity:.35}}
+.collision-banner .warn-ico{
+  width:26px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+}
+.collision-banner .warn-ico svg{width:26px;height:24px;fill:var(--coral)}
+@media(max-width:520px){.collision-banner{font-size:.85rem;padding:9px 14px;gap:8px;bottom:-44px}}
+
+/* alert card floating */
+.alert-card{
+  position:absolute;z-index:8;top:-4%;right:-2%;
+  background:rgba(13,36,56,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid var(--coral);border-left:3px solid var(--coral);
+  border-radius:12px;padding:16px 18px;width:248px;
+  box-shadow:0 14px 46px -12px rgba(0,0,0,.85);
+  animation:floaty 5s ease-in-out infinite;
+  transition:opacity .45s ease, visibility .45s ease;
+}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.alert-card .ac-head{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;color:var(--coral);letter-spacing:.5px;margin-bottom:10px}
+.alert-card .ac-head .ic{width:9px;height:9px;border-radius:50%;background:var(--coral);animation:blink 1s infinite}
+.alert-card .row{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.74rem;color:var(--mist);margin-top:5px}
+.alert-card .row b{color:var(--ice)}
+/* compass strip: scrolling tape that indicates evasive turn in degrees */
+.compass{margin-top:13px;padding-top:12px;border-top:1px solid rgba(124,170,200,.18)}
+.compass .clabel{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.64rem;color:var(--mist);margin-bottom:6px}
+.compass .clabel b{color:var(--coral)}
+.compass-tape{position:relative;height:34px;border-radius:6px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(8,23,38,.6),rgba(8,23,38,.2));
+  border:1px solid rgba(124,170,200,.15)}
+.compass-tape .ticks{position:absolute;top:0;left:0;height:100%;will-change:transform}
+.compass-tape .tick{position:absolute;top:0;width:1px;height:9px;background:rgba(124,170,200,.5)}
+.compass-tape .tick.major{height:15px;background:rgba(207,228,239,.85)}
+.compass-tape .tnum{position:absolute;top:15px;font-family:'Space Mono',monospace;font-size:.56rem;color:var(--mist);transform:translateX(-50%)}
+.compass-tape .needle{position:absolute;top:0;left:50%;width:2px;height:100%;background:var(--coral);transform:translateX(-50%);z-index:3;box-shadow:0 0 8px var(--coral)}
+.compass-tape .needle::after{content:"";position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--coral)}
+@media(max-width:980px){.alert-card{right:0;top:-2%;width:210px}}
+@media(max-width:520px){
+  .alert-card{
+    width:150px;padding:9px 10px;right:auto;left:2%;top:2%;
+    transform:scale(.92);transform-origin:top left;
+  }
+  .alert-card .ac-head{font-size:.62rem;margin-bottom:5px}
+  .alert-card .row{font-size:.56rem;margin-top:2px}
+  .compass{margin-top:8px;padding-top:7px}
+  .compass .clabel{font-size:.5rem;margin-bottom:3px}
+  .compass-tape{height:24px}
+}
+
+/* ---------- FEATURES ---------- */
+.section{max-width:1200px;margin:0 auto;padding:90px 40px}
+.sec-tag{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+.sec-title{font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:700;color:#fff;letter-spacing:-1px;max-width:640px;margin-bottom:14px}
+.sec-sub{color:var(--mist);max-width:560px;margin-bottom:50px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+.card{
+  background:linear-gradient(160deg,var(--navy-800),var(--navy-900));
+  border:1px solid var(--line);border-radius:16px;padding:30px 26px;
+  transition:transform .25s,border-color .25s;position:relative;overflow:hidden;
+}
+.card:hover{transform:translateY(-4px);border-color:rgba(23,184,154,.4)}
+.card .ico{width:46px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:rgba(23,184,154,.12);margin-bottom:18px}
+.card .ico svg{width:24px;height:24px;stroke:var(--teal)}
+.card h3{font-size:1.15rem;font-weight:600;color:#fff;margin-bottom:8px}
+.card p{font-size:.92rem;color:var(--mist)}
+.card .corner{position:absolute;top:0;right:0;width:60px;height:60px;
+  background:radial-gradient(circle at top right,rgba(23,184,154,.18),transparent 70%)}
+
+/* ---------- BAND ---------- */
+.band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:linear-gradient(90deg,rgba(27,58,107,.25),transparent)}
+.band-inner{max-width:1200px;margin:0 auto;padding:60px 40px;display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+.band .stat-lg .n{font-family:'Space Mono',monospace;font-size:2.6rem;font-weight:700;color:var(--teal)}
+.band .stat-lg .l{color:var(--mist);font-size:.85rem}
+
+/* ---------- FOOTER ---------- */
+footer{max-width:1200px;margin:0 auto;padding:50px 40px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+footer .brand .name{font-size:1.05rem}
+footer .fnote{color:var(--mist);font-size:.8rem}
+
+/* ---- Schermi stretti: riduce il padding laterale ed elimina l'overflow ---- */
+@media(max-width:520px){
+  nav{padding-left:18px;padding-right:18px}
+  .hero{padding-left:20px;padding-right:20px}
+  .section,.vision,.classes{padding-left:20px;padding-right:20px}
+  .band-inner{padding-left:20px;padding-right:20px}
+  footer{padding-left:20px;padding-right:20px}
+  .hero h1{letter-spacing:-1px}
+}
+html,body{max-width:100%;overflow-x:hidden}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
+.reveal.in{opacity:1;transform:none}
+/* Se il JS è disattivato, mostra comunque i contenuti */
+.no-js .reveal{opacity:1;transform:none}
+/* Rispetta chi preferisce ridurre le animazioni */
+@media (prefers-reduced-motion: reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  .sweep-canvas,.scanline{animation:none}
+}
+
+/* ---------- AI VISION ---------- */
+.vision{max-width:1200px;margin:0 auto;padding:90px 40px}
+.vision-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+@media(max-width:880px){.vision-grid{grid-template-columns:1fr;gap:36px}}
+.feeds{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:520px){.feeds{grid-template-columns:1fr}}
+.feed{
+  position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;
+  border:1px solid var(--line);
+}
+.feed.rgb{background:#0d2a3c}
+.feed.rgb .rimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.feed.thermal{background:#000}
+.feed.thermal .timg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.05)}
+.feed .scan-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:22px 22px}
+.feed .ftag{position:absolute;top:8px;left:8px;font-family:'Space Mono',monospace;font-size:.6rem;
+  letter-spacing:1px;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px;border-radius:5px;text-transform:uppercase}
+.feed .rec{position:absolute;top:8px;right:8px;font-family:'Space Mono',monospace;font-size:.58rem;color:#fff;display:flex;align-items:center;gap:5px}
+.feed .rec::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--coral);animation:blink 1.1s infinite}
+/* the detected vessel silhouette */
+.feed .target{position:absolute;bottom:30%;left:50%;transform:translateX(-50%);width:34%;height:14%}
+.feed.rgb .target{background:#0a1a26;border-radius:3px 8px 3px 3px;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+.feed.thermal .target{background:linear-gradient(180deg,#fff,#bbb);border-radius:3px 8px 3px 3px;filter:blur(.4px)}
+.feed.thermal .target::after{content:"";position:absolute;inset:-8px;background:radial-gradient(circle,rgba(255,255,255,.5),transparent 70%);border-radius:50%}
+/* AI bounding box */
+.bbox{position:absolute;bottom:26%;left:50%;transform:translateX(-50%);width:46%;height:24%;
+  border:1.5px solid var(--teal);border-radius:3px;animation:lock 3s ease-in-out infinite}
+.bbox::before,.bbox::after{content:"";position:absolute;width:10px;height:10px;border:2px solid var(--teal)}
+.bbox::before{top:-2px;left:-2px;border-right:none;border-bottom:none}
+.bbox::after{bottom:-2px;right:-2px;border-left:none;border-top:none}
+.bbox .blabel{position:absolute;top:-20px;left:-2px;font-family:'Space Mono',monospace;font-size:.55rem;
+  background:var(--teal);color:#000;padding:1px 6px;border-radius:3px;font-weight:700;white-space:nowrap}
+@keyframes lock{0%,100%{opacity:.55;transform:translateX(-50%) scale(1.04)}50%{opacity:1;transform:translateX(-50%) scale(1)}}
+.scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);
+  animation:scanmove 3s linear infinite;opacity:.7}
+@keyframes scanmove{0%{top:0}100%{top:100%}}
+
+.weather-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.wchip{display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ice);
+  background:rgba(23,184,154,.08);border:1px solid var(--line);border-radius:30px;padding:7px 14px}
+.wchip svg{width:15px;height:15px;stroke:var(--teal);fill:none;stroke-width:2}
+.fusion-tag{display:inline-flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;
+  font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
+
+/* ---------- fusion strip radar+camera ---------- */
+.fusion-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:8px;
+  margin-top:34px;background:var(--navy-800);border:1px solid var(--line);border-radius:16px;padding:24px 20px}
+@media(max-width:680px){.fusion-flow{grid-template-columns:1fr;gap:18px}.fusion-flow .farrow{transform:rotate(90deg)}}
+.fnode{text-align:center;padding:8px}
+.fnode .ftitle{font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:1px;color:var(--mist);text-transform:uppercase;margin-bottom:10px}
+.fmini{position:relative;width:88px;height:64px;margin:0 auto;border-radius:8px;border:1px solid var(--line);overflow:hidden}
+.fmini.radar{background:radial-gradient(circle,var(--navy-700),var(--navy-900))}
+.fmini.radar .rb{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.fmini.radar .rb.a{top:30%;left:30%}.fmini.radar .rb.b{top:55%;left:60%;background:var(--coral);box-shadow:0 0 8px var(--coral)}
+.fmini.radar::after{content:"";position:absolute;top:50%;left:50%;width:50%;height:1.5px;background:linear-gradient(90deg,var(--teal),transparent);transform-origin:left;animation:spin 3s linear infinite}
+.fmini.cam{background:linear-gradient(180deg,#16384f,#0d2a3c)}
+.fmini.cam .box{position:absolute;border:1.5px solid var(--teal);border-radius:2px;width:26px;height:16px}
+.fmini.cam .box.a{top:22%;left:18%}.fmini.cam .box.b{top:50%;left:48%;border-color:var(--coral)}
+.fmini.track{background:var(--navy-900)}
+.fmini.track .tb{position:absolute;width:11px;height:11px;border-radius:50%;border:2px solid var(--teal)}
+.fmini.track .tb::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--teal)}
+.fmini.track .tb.a{top:26%;left:26%}.fmini.track .tb.b{top:50%;left:55%;border-color:var(--coral)}
+.fmini.track .tb.b::after{background:var(--coral)}
+.fnode .fcap{font-size:.74rem;color:var(--ice);margin-top:10px}
+.farrow{color:var(--teal);font-size:1.4rem;font-weight:700}
+.fplus{color:var(--mist);font-size:1.4rem;font-weight:700}
+
+/* ---------- dual radar scenarios ---------- */
+.scenarios{max-width:1200px;margin:0 auto;padding:90px 40px}
+.scen-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:44px}
+@media(max-width:880px){.scen-grid{grid-template-columns:1fr;gap:40px}}
+.scen-grid.scen-single{grid-template-columns:1fr;max-width:760px;margin-left:auto;margin-right:auto}
+.scen-grid.scen-single .scen-card{padding-bottom:84px}
+.scen-grid.scen-single .alert-card{top:0;right:-2%}
+.scen-grid.scen-single .collision-banner{bottom:-64px}
+@media(max-width:560px){
+  .scen-grid.scen-single .alert-card{width:150px;padding:9px 10px;right:auto;left:0;top:0;transform:scale(.9);transform-origin:top left}
+  .scen-grid.scen-single .alert-card .ac-head{font-size:.62rem;margin-bottom:5px}
+  .scen-grid.scen-single .alert-card .row{font-size:.56rem;margin-top:2px}
+  .scen-grid.scen-single .compass{margin-top:8px;padding-top:7px}
+  .scen-grid.scen-single .compass-tape{height:24px}
+}
+.scen-card{background:linear-gradient(160deg,var(--navy-800),var(--navy-900));
+  border:1px solid var(--line);border-radius:18px;padding:26px 24px 30px;position:relative;overflow:hidden}
+.scen-card .scen-tag{display:inline-flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;
+  font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.scen-card h3{font-size:1.25rem;font-weight:600;color:#fff;margin-bottom:6px}
+.scen-card p.scd{font-size:.88rem;color:var(--mist);margin-bottom:20px;min-height:42px}
+/* mini radar scope reused for both scenarios */
+.mini-scope{position:relative;width:100%;max-width:380px;aspect-ratio:1;margin:0 auto;border-radius:50%;
+  background:radial-gradient(circle at center,var(--navy-700) 0%,var(--navy-800) 55%,var(--navy-900) 100%);
+  border:1px solid rgba(23,184,154,.25);
+  box-shadow:inset 0 0 70px rgba(0,0,0,.6),0 0 50px -20px rgba(23,184,154,.4);overflow:hidden}
+.mini-scope .ring{position:absolute;border:1px solid rgba(124,170,200,.12);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.mini-scope .cross{position:absolute;background:rgba(124,170,200,.1)}
+.mini-scope .cross.h{top:50%;left:0;right:0;height:1px}
+.mini-scope .cross.v{left:50%;top:0;bottom:0;width:1px}
+.mini-scope canvas{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;pointer-events:none}
+.mini-scope .vessel{position:absolute;transform:translate(-50%,-50%);z-index:3}
+.mini-scope .vessel .hull{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:17px solid currentColor;filter:drop-shadow(0 0 5px currentColor)}
+.mini-scope .vessel.own .hull{border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:22px solid var(--teal);filter:drop-shadow(0 0 10px rgba(23,184,154,.9))}
+.mini-scope .vessel.obj .hull{border:none;width:13px;height:10px;border-radius:2px;background:currentColor;filter:drop-shadow(0 0 6px currentColor)}
+.mini-scope .v-safe{color:var(--teal)}
+.mini-scope .v-warn{color:var(--amber)}
+.mini-scope .v-danger{color:var(--coral)}
+.mini-scope .threat{position:absolute;top:50%;left:50%;height:2px;transform-origin:left center;z-index:2;background:linear-gradient(90deg,var(--coral),rgba(255,107,92,0));border-radius:2px}
+.mini-scope .threat.warn{background:linear-gradient(90deg,var(--amber),rgba(245,166,35,0))}
+.mini-scope .label{position:absolute;transform:translate(-50%,-50%);z-index:6;font-family:'Space Mono',monospace;
+  font-size:.58rem;white-space:nowrap;padding:2px 6px;border-radius:4px;background:rgba(8,23,38,.82);border:1px solid currentColor;letter-spacing:.5px}
+/* mini alert chip under each scope */
+.scen-alert{margin-top:18px;border:1px solid var(--coral);border-left:3px solid var(--coral);border-radius:10px;
+  padding:11px 14px;background:rgba(40,8,8,.4);opacity:.35;transition:opacity .4s ease}
+.scen-alert.on{opacity:1;background:rgba(40,8,8,.7);animation:alarmFlash 1s steps(1,end) infinite}
+.scen-alert .sa-head{display:flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700;color:var(--coral);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px}
+.scen-alert .sa-head .ic{width:8px;height:8px;border-radius:50%;background:var(--coral)}
+.scen-alert .sa-row{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.66rem;color:var(--mist);margin-top:3px}
+.scen-alert .sa-row b{color:var(--ice)}
+.scen-alert .sa-row b.act{color:var(--coral)}
+.scen-idle{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--teal);letter-spacing:.5px}
+
+/* ---------- classi riconosciute ---------- */
+.classes{max-width:1200px;margin:0 auto;padding:0 40px 70px}
+.classes-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:30px}
+@media(max-width:880px){.classes-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.classes-grid{grid-template-columns:repeat(2,1fr)}}
+.cls{background:var(--navy-800);border:1px solid var(--line);border-radius:12px;padding:18px 14px;text-align:center;
+  transition:transform .2s,border-color .2s}
+.cls:hover{transform:translateY(-3px);border-color:rgba(23,184,154,.4)}
+.cls.hot{border-color:rgba(245,166,35,.4)}
+.cls .cls-ic{width:40px;height:40px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.cls .cls-ic svg{width:34px;height:34px;stroke:var(--teal);fill:none;stroke-width:1.6}
+.cls.hot .cls-ic svg{stroke:var(--amber)}
+.cls h4{font-size:.82rem;font-weight:600;color:#fff;margin-bottom:3px}
+.cls span{font-size:.68rem;color:var(--mist);font-family:'Space Mono',monospace}
+.cls .badge{display:inline-block;margin-top:8px;font-size:.55rem;font-family:'Space Mono',monospace;
+  letter-spacing:.5px;color:var(--amber);background:rgba(245,166,35,.12);padding:2px 7px;border-radius:20px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">
+    <span class="logo-badge"><svg viewBox="0 0 240 200" aria-label="Collidian">
+      <path d="M40 36 L 116 100 L 40 164" fill="none" stroke="#1B3A6B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M210 40 C 150 64, 132 86, 132 100 C 132 114, 150 136, 210 160" fill="none" stroke="#17B89A" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="166" cy="100" r="17" fill="#FF6B5C"/>
+    </svg></span>
+    <span class="name">Colli<span>dian</span></span>
+  </div>
+  <div class="nav-links">
+    <a href="#vision">AI Vision</a>
+    <a href="#scenarios">Scenarios</a>
+    <a href="#how">Technology</a>
+    <a href="#features">Features</a>
+    <a href="#numbers">Data</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-copy">
+    <div class="tag"><span class="dot"></span>System active · 360° monitoring</div>
+    <h1>Sees the collision<br>before it <em>happens</em>.</h1>
+    <p class="lead">Collidian analyzes every vessel within operational range in real time, computes intersecting courses and flags the risk before it becomes an emergency maneuver.</p>
+    <div class="hero-actions">
+      <a href="#contact" class="btn-primary">Get in touch</a>
+      <a href="#how" class="btn-ghost">How it works</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num"><b>360°</b></div><div class="lab">continuous coverage</div></div>
+      <div class="stat"><div class="num">&lt;<b>2</b>s</div><div class="lab">alert latency</div></div>
+      <div class="stat"><div class="num"><b>3</b>nm</div><div class="lab">detection range</div></div>
+    </div>
+  </div>
+
+  <div class="scope-wrap">
+    <div class="scope" id="scope">
+      <div class="ring" style="width:25%;height:25%"></div>
+      <div class="ring" style="width:50%;height:50%"></div>
+      <div class="ring" style="width:75%;height:75%"></div>
+      <div class="ring" style="width:98%;height:98%"></div>
+      <div class="cross h"></div>
+      <div class="cross v"></div>
+      <canvas class="sweep-canvas" id="sweepCanvas"></canvas>
+      <div class="scope-cta mono">LIVE TRAFFIC · 8 CONTACTS</div>
+    </div>
+    <div class="collision-banner" id="collisionBanner">
+      <span class="warn-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L23 21 H1 Z M12 9 v6 M12 17.5 v.5" fill="none" stroke="#FF6B5C" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+      COLLISION ALARM
+    </div>
+
+    <div class="alert-card" id="alertCard" style="opacity:0;visibility:hidden">
+      <div class="ac-head"><span class="ic"></span>COLLISION RISK</div>
+      <div class="row"><span>Contact</span><b id="alContact">MV-209</b></div>
+      <div class="row"><span>CPA</span><b id="alCpa">0.4 nm</b></div>
+      <div class="row"><span>TCPA</span><b id="alTcpa">06:12</b></div>
+      <div class="row"><span>Action</span><b style="color:var(--coral)">TURN STARBOARD</b></div>
+      <div class="compass">
+        <div class="clabel"><span>EVASIVE HEADING</span><b id="alDeg">+0°</b></div>
+        <div class="compass-tape">
+          <div class="ticks" id="compassTicks"></div>
+          <div class="needle"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="vision" id="vision">
+  <div class="vision-grid">
+    <div>
+      <div class="fusion-tag reveal"><span style="width:7px;height:7px;border-radius:50%;background:var(--teal);display:inline-block"></span>Sensor fusion · on-board AI</div>
+      <h2 class="sec-title reveal">Identifies the target<br>where the eye cannot reach.</h2>
+      <p class="sec-sub reveal" style="margin-bottom:0">Collidian's artificial intelligence fuses imagery from <b style="color:var(--ice)">daylight RGB</b> and <b style="color:var(--ice)">thermal</b> cameras with the radar plot: each contact is cross-checked across sensors, so the same vessel becomes one high-confidence track — identified and classified at night, in fog, in rain or against the light, when radar or the human eye alone are not enough.</p>
+      <div class="weather-row">
+        <div class="wchip reveal"><svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6l1.5 1.5M16.5 16.5L18 18M18 6l-1.5 1.5M7.5 16.5L6 18"/><circle cx="12" cy="12" r="4"/></svg>Day</div>
+        <div class="wchip reveal"><svg viewBox="0 0 24 24"><path d="M18 13a6 6 0 11-7-9 5 5 0 007 9z"/></svg>Night</div>
+        <div class="wchip reveal"><svg viewBox="0 0 24 24"><path d="M4 14a4 4 0 014-4 5 5 0 019.5-1.5A3.5 3.5 0 0118 14H4z"/><path d="M7 18h2M12 18h2M17 18h2"/></svg>Fog</div>
+        <div class="wchip reveal"><svg viewBox="0 0 24 24"><path d="M5 13a4 4 0 014-4 5 5 0 019.5-1.5A3.5 3.5 0 0118 13H5z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/></svg>Rain</div>
+        <div class="wchip reveal"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 000 18"/></svg>Backlight</div>
+      </div>
+    </div>
+
+    <div class="feeds reveal">
+      <div class="feed rgb">
+        <img class="rimg" src="data:image/jpeg;base64,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" alt="RGB daytime view with detected vessels">
+        <div class="ftag">CAM · RGB</div>
+        <div class="rec">REC</div>
+        <div class="scanline"></div>
+      </div>
+      <div class="feed thermal">
+        <img class="timg" src="data:image/jpeg;base64,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" alt="Thermal view with vessels detected on the horizon">
+        <div class="ftag">CAM · THERMAL</div>
+        <div class="rec">REC</div>
+        <div class="scanline"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fusion-flow reveal">
+    <div class="fnode">
+      <div class="ftitle">Radar plot</div>
+      <div class="fmini radar"><span class="rb a"></span><span class="rb b"></span></div>
+      <div class="fcap">Position &amp; range</div>
+    </div>
+    <div class="fplus">+</div>
+    <div class="fnode">
+      <div class="ftitle">AI camera detection</div>
+      <div class="fmini cam"><span class="box a"></span><span class="box b"></span></div>
+      <div class="fcap">Visual identity</div>
+    </div>
+    <div class="farrow">&#8594;</div>
+    <div class="fnode">
+      <div class="ftitle">Fused track</div>
+      <div class="fmini track"><span class="tb a"></span><span class="tb b"></span></div>
+      <div class="fcap" style="color:var(--teal)">One confirmed target</div>
+    </div>
+  </div>
+</section>
+
+<section class="scenarios" id="scenarios">
+  <div class="sec-tag reveal">Floating objects</div>
+  <h2 class="sec-title reveal">The threat a radar barely sees.</h2>
+  <p class="sec-sub reveal">Beyond moving vessels, Collidian catches the half-submerged object drifting silently on your bow — the kind of contact radar can miss, but thermal AI flags in time to alter course.</p>
+  <div class="scen-grid scen-single">
+
+    <div class="scen-card reveal">
+      <div class="scen-tag"><span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>Scenario · floating object</div>
+      <h3>Semi-submerged container</h3>
+      <p class="scd">A drifting container sits still in the water, directly ahead. Barely visible to radar, it's caught by thermal AI as OWN approaches — in time to alter course.</p>
+      <div class="scope-wrap" style="position:relative">
+        <div class="mini-scope" id="scopeB">
+          <div class="ring" style="width:33%;height:33%"></div>
+          <div class="ring" style="width:66%;height:66%"></div>
+          <div class="ring" style="width:98%;height:98%"></div>
+          <div class="cross h"></div><div class="cross v"></div>
+          <canvas id="canvasB"></canvas>
+        </div>
+        <div class="collision-banner" id="collisionBannerB">
+          <span class="warn-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L23 21 H1 Z M12 9 v6 M12 17.5 v.5" fill="none" stroke="#FF6B5C" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+          COLLISION ALARM
+        </div>
+        <div class="alert-card" id="alertCardB" style="opacity:0;visibility:hidden">
+          <div class="ac-head"><span class="ic"></span>COLLISION RISK</div>
+          <div class="row"><span>Object</span><b id="alContactB">CONTAINER</b></div>
+          <div class="row"><span>Detected by</span><b style="color:var(--amber)">THERMAL AI</b></div>
+          <div class="row"><span>Action</span><b style="color:var(--coral)">TURN STARBOARD</b></div>
+          <div class="compass">
+            <div class="clabel"><span>EVASIVE HEADING</span><b id="alDegB">+0°</b></div>
+            <div class="compass-tape">
+              <div class="ticks" id="compassTicksB"></div>
+              <div class="needle"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="classes">
+  <div class="sec-tag reveal">Classification</div>
+  <h2 class="sec-title reveal" style="font-size:clamp(1.5rem,3vw,2.1rem)">What the AI recognizes.</h2>
+  <p class="sec-sub reveal" style="margin-bottom:0">From large ships to surface-level obstacles that escape radar. Semi-submerged objects show up best in thermal analysis, where their temperature difference from the sea makes them visible.</p>
+  <div class="classes-grid">
+    <div class="cls reveal"><div class="cls-ic"><svg viewBox="0 0 32 32"><path d="M4 20h24l-3 6H7z"/><path d="M9 20V9h11l5 6v5"/><path d="M13 12h6"/></svg></div><h4>Merchant ships</h4><span>cargo · tanker</span></div>
+    <div class="cls reveal"><div class="cls-ic"><svg viewBox="0 0 32 32"><path d="M5 21h22l-3 5H8z"/><path d="M11 21l2-9 9 4"/><path d="M13 12V6"/></svg></div><h4>Fishing boats</h4><span>fishing</span></div>
+    <div class="cls reveal"><div class="cls-ic"><svg viewBox="0 0 32 32"><path d="M6 22h20l-3 5H9z"/><path d="M16 22V7l9 12"/><path d="M16 12l-7 10"/></svg></div><h4>Recreational</h4><span>sail · yacht</span></div>
+    <div class="cls reveal"><div class="cls-ic"><svg viewBox="0 0 32 32"><path d="M16 6l4 8h-8z"/><path d="M16 14v8"/><path d="M10 24h12l-2 4h-8z"/></svg></div><h4>Buoys & markers</h4><span>buoy · marker</span></div>
+    <div class="cls reveal hot"><div class="cls-ic"><svg viewBox="0 0 32 32"><rect x="6" y="13" width="20" height="7" rx="1"/><path d="M10 13v7M16 13v7M22 13v7"/><path d="M3 23q4 2 8 0t8 0 8 0"/></svg></div><h4>Drifting containers</h4><span>semi-submerged</span><div class="badge">THERMAL</div></div>
+    <div class="cls reveal hot"><div class="cls-ic"><svg viewBox="0 0 32 32"><path d="M7 15l5-2 6 3 7-2"/><path d="M9 15l-2 4M14 16l1 4M20 16l1 3"/><path d="M3 24q4 2 8 0t8 0 8 0"/></svg></div><h4>Wrecks & debris</h4><span>partially awash</span><div class="badge">THERMAL</div></div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="sec-tag reveal">How it works</div>
+  <h2 class="sec-title reveal">From scan to action, in three steps.</h2>
+  <p class="sec-sub reveal">Every contact is detected, assessed and classified. You receive only what matters: the real risk and the recommended maneuver.</p>
+  <div class="grid">
+    <div class="card reveal"><div class="corner"></div>
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12 L12 4"/></svg></div>
+      <h3>1 · Detect</h3><p>Fuses AIS, radar, and RGB and thermal cameras into a single, continuously updated traffic map.</p>
+    </div>
+    <div class="card reveal"><div class="corner"></div>
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 17 L9 11 L13 15 L21 7"/><path d="M21 7 v6"/><path d="M21 7 h-6"/></svg></div>
+      <h3>2 · Compute</h3><p>Estimates the closest point of approach (CPA) and time to CPA (TCPA) for every vessel.</p>
+    </div>
+    <div class="card reveal"><div class="corner"></div>
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2 L20 6 v6 c0 5-4 7-8 8-4-1-8-3-8-8 V6 Z"/><path d="M9 12 l2 2 l4-4"/></svg></div>
+      <h3>3 · Alert</h3><p>Classifies the risk as safe, caution or danger and suggests the evasive maneuver in line with COLREG.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="numbers">
+  <div class="band-inner">
+    <div class="stat-lg reveal"><div class="n">99.7%</div><div class="l">contacts classified correctly through sensor fusion</div></div>
+    <div class="stat-lg reveal"><div class="n">8</div><div class="l">targets tracked simultaneously</div></div>
+    <div class="stat-lg reveal"><div class="n">24/7</div><div class="l">vigilance without fatigue</div></div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="sec-tag reveal">Features</div>
+  <h2 class="sec-title reveal">Built for those on the bridge.</h2>
+  <div class="grid">
+    <div class="card reveal"><div class="corner"></div><h3>Smart prioritization</h3><p>Puts the most imminent threat first, filters out irrelevant traffic. No false alarms.</p></div>
+    <div class="card reveal"><div class="corner"></div><h3>COLREG-compliant</h3><p>Suggested maneuvers follow the international regulations for preventing collisions at sea.</p></div>
+    <div class="card reveal"><div class="corner"></div><h3>On-board integration</h3><p>Connects to existing radar, AIS and ECDIS. No replacement, just an added layer of intelligence.</p></div>
+  </div>
+</section>
+
+<section class="section" id="contact" style="text-align:center;padding-top:40px">
+  <div class="sec-tag reveal" style="display:inline-block">Contact</div>
+  <h2 class="sec-title reveal" style="margin-inline:auto;font-size:clamp(1.6rem,3vw,2.3rem)">Let's talk about your fleet.</h2>
+  <p class="sec-sub reveal" style="margin-inline:auto">Technical specs, quotes or partnership inquiries. We reply to every message.</p>
+  <a class="btn-primary reveal" href="mailto:info@collidian.com" style="display:inline-flex;align-items:center;gap:10px">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="stroke:#000"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    info@collidian.com
+  </a>
+</section>
+
+<footer>
+  <div class="brand">
+    <span class="logo-badge" style="padding:5px 7px;border-radius:9px"><svg viewBox="0 0 240 200" style="width:48px;height:40px;display:block" aria-label="Collidian">
+      <path d="M40 36 L 116 100 L 40 164" fill="none" stroke="#1B3A6B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M210 40 C 150 64, 132 86, 132 100 C 132 114, 150 136, 210 160" fill="none" stroke="#17B89A" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="166" cy="100" r="17" fill="#FF6B5C"/>
+    </svg></span>
+    <span class="name">Colli<span style="color:var(--teal)">dian</span></span>
+  </div>
+  <div class="fnote">Marine Collision Avoidance · <a href="mailto:info@collidian.com" style="color:var(--teal);text-decoration:none">info@collidian.com</a></div>
+</footer>
+
+<script>
+// --- ANIMATED RADAR: moving targets, developing collision, live alarm ---
+const scope = document.getElementById('scope');
+const alertCard = document.getElementById('alertCard');
+const alContact = document.getElementById('alContact');
+const alCpa = document.getElementById('alCpa');
+const alTcpa = document.getElementById('alTcpa');
+const alDeg = document.getElementById('alDeg');
+const collisionBanner = document.getElementById('collisionBanner');
+const compassTicks = document.getElementById('compassTicks');
+// build the compass tape ticks once (range -90°..+90°, 0 centered)
+let compassPxPerDeg = 2.4;
+(function buildCompass(){
+  if(!compassTicks) return;
+  let html='';
+  for(let deg=-90; deg<=90; deg+=5){
+    const major = deg%30===0;
+    // position computed at runtime relative to tape center; store deg in data
+    html+='<span class="tick'+(major?' major':'')+'" data-deg="'+deg+'"></span>';
+    if(major) html+='<span class="tnum" data-deg="'+deg+'">'+(deg>0?'+':'')+deg+'</span>';
+  }
+  compassTicks.innerHTML=html;
+})();
+// reposition the tape so that `heading` degrees sits under the fixed needle
+function setCompass(heading){
+  if(!compassTicks) return;
+  const tape=compassTicks.parentElement;
+  const center=tape.clientWidth/2;
+  // place each tick at center + (tickDeg - heading)*pxPerDeg
+  compassTicks.querySelectorAll('.tick,.tnum').forEach(el=>{
+    const d=+el.dataset.deg;
+    const x=center+(d-heading)*compassPxPerDeg;
+    el.style.left=x+'px';
+  });
+}
+setCompass(0);
+const R = () => scope.clientWidth;
+
+// Each vessel moves in Cartesian space (units = % of radius, center = 0,0).
+// vx,vy = velocity per second. Safe traffic stays far and drifts; the threat
+// vessel closes in on the center until the evasive maneuver kicks in.
+let vessels, tCycle;
+function initVessels(){
+  tCycle = 0;
+  // tangential-biased course: vessels glide sideways around the center
+  // (each its own way) instead of heading toward it -> no coordinated inrush
+  const rv=(x,y)=>{
+    const d=Math.hypot(x,y)||1;
+    const tx=-y/d, ty=x/d;                 // unit tangent (perpendicular to radius)
+    const sp=0.9+Math.random()*1.4;        // random speed
+    const dir=Math.random()<0.5?1:-1;      // clockwise or counter-clockwise
+    const jitter=(Math.random()-0.5)*0.5;  // small radial wobble for variety
+    const nx=x/d, ny=y/d;
+    return {vx:(tx*dir+nx*jitter)*sp, vy:(ty*dir+ny*jitter)*sp};
+  };
+  vessels = [
+    {own:true, x:0, y:0, vx:0, vy:0, lab:'OWN'},
+    // THREAT: starts far top-left, heads straight toward the center
+    {x:-46, y:-44, vx:2.2, vy:2.1, lab:'MV-209', threat:true, hdg:0},
+    // safe traffic: scattered positions, each gliding on its own tangential course
+    {x:52,  y:-30, ...rv(52,-30), lab:'CG-04'},
+    {x:-58, y:18,  ...rv(-58,18), lab:'FV-12'},
+    {x:40,  y:46,  ...rv(40,46),  lab:'TK-77'},
+    {x:60,  y:8,   ...rv(60,8),   lab:''},
+    {x:-30, y:56,  ...rv(-30,56), lab:''},
+    {x:22,  y:-60, ...rv(22,-60), lab:'SY-31'},
+    {x:-62, y:-12, ...rv(-62,-12),lab:''},
+  ];
+}
+initVessels();
+
+// classify a vessel by distance from center (radius%) -> safe/warn/danger
+function stateOf(v){
+  if(v.own) return 'safe';
+  const d=Math.hypot(v.x,v.y);
+  if(v.threat){
+    if(d<32) return 'danger';
+    if(d<46) return 'warn';
+  }
+  return 'safe';
+}
+
+function build(){
+  scope.querySelectorAll('.vessel,.threat,.label').forEach(e=>e.remove());
+  const size=R(), cx=size/2, cy=size/2, rad=size/2;
+  // heading-up radar: when OWN turns +evCur° to starboard, the whole world
+  // rotates -evCur° about the center. Apply that rotation to every contact.
+  const fr=-ownEvasiveCurrent*Math.PI/180, fc=Math.cos(fr), fs=Math.sin(fr);
+  vessels.forEach(v=>{
+    const s=stateOf(v);
+    // rotate the contact's position into OWN's current (turned) frame
+    let vxr=v.x, vyr=v.y;
+    if(!v.own){ vxr=v.x*fc - v.y*fs; vyr=v.x*fs + v.y*fc; }
+    const x=cx+(vxr/100)*rad;
+    const y=cy+(vyr/100)*rad;
+    if(!v.own && (s==='danger'||s==='warn')){
+      const t=document.createElement('div');
+      t.className='threat'+(s==='warn'?' warn':'');
+      const len=Math.hypot(x-cx,y-cy);
+      const deg=Math.atan2(y-cy,x-cx)*180/Math.PI;
+      t.style.width=len+'px';
+      t.style.transform='rotate('+deg+'deg)';
+      scope.appendChild(t);
+    }
+    const el=document.createElement('div');
+    el.className='vessel '+(v.own?'own ':'')+'v-'+s;
+    el.style.left=x+'px';el.style.top=y+'px';
+    // headings also rotate with the frame for non-own vessels
+    const headDeg = v.own ? ownEvasiveCurrent : (Math.atan2(v.vy,v.vx)*180/Math.PI + 90 - ownEvasiveCurrent);
+    el.style.transform='translate(-50%,-50%) rotate('+headDeg+'deg)';
+    el.innerHTML='<div class="hull"></div>';
+    scope.appendChild(el);
+    if(v.lab){
+      const l=document.createElement('div');
+      l.className='label v-'+s;
+      l.style.left=x+'px';l.style.top=(y-20)+'px';
+      l.style.color=s==='danger'?'var(--coral)':s==='warn'?'var(--amber)':'var(--teal)';
+      l.textContent=v.lab;
+      scope.appendChild(l);
+    }
+  });
+}
+
+// motion update + alarm logic, runs on its own clock
+let alarmOn=false;
+let ownEvasiveTarget=0, ownEvasiveCurrent=0;
+let lastMove=performance.now();
+function moveTargets(now){
+  const dt=(now-lastMove)/1000; lastMove=now;
+  tCycle+=dt;
+  const threat = vessels.find(v=>v.threat);
+
+  vessels.forEach(v=>{
+    if(v.own) return;
+    v.x+=v.vx*dt; v.y+=v.vy*dt;
+    if(!v.threat){
+      const d=Math.hypot(v.x,v.y)||0.001;
+      const nx=v.x/d, ny=v.y/d;
+      // reflect off the outer ring (like a real wall) instead of reversing both axes
+      if(d>66){
+        const dot=v.vx*nx+v.vy*ny;
+        v.vx-=2*dot*nx; v.vy-=2*dot*ny;
+      }
+      // gently steer away from the central zone (kept clear for OWN ship & threat),
+      // reflecting outward only — no uniform radial push, so paths stay scattered
+      if(d<28){
+        const dot=v.vx*nx+v.vy*ny;
+        if(dot<0){ v.vx-=2*dot*nx; v.vy-=2*dot*ny; }
+      }
+    }
+  });
+
+  // THREAT lifecycle: close in -> trigger alarm -> evasive turn -> reset
+  const d=Math.hypot(threat.x,threat.y);
+  if(d<10 && !threat.evading){
+    // closest approach reached: OWN holds its evasive course; threat veers away
+    threat.evading=true;
+    const sp=Math.hypot(threat.vx,threat.vy)*1.3;  // accelerate outbound
+    const a=Math.atan2(threat.vy,threat.vx)+2.1;   // veer outbound
+    threat.vx=Math.cos(a)*sp; threat.vy=Math.sin(a)*sp;
+  }
+  // once it has escaped far enough, recycle the whole scene
+  if(threat.evading && d>60){ initVessels(); ownEvasiveTarget=0; }
+
+  // alarm follows the danger state
+  const st=stateOf(threat);
+  if(st==='danger' && !alarmOn){
+    alarmOn=true;
+    alertCard.style.visibility='visible';
+    alertCard.style.opacity='1';
+    if(collisionBanner) collisionBanner.classList.add('on');
+    if(alContact) alContact.textContent=threat.lab;
+    // OWN turns to starboard; set the target once and start easing from 0
+    ownEvasiveTarget = 35 + Math.round(Math.random()*25); // 35°–60°
+    ownEvasiveCurrent = 0;
+  } else if(st!=='danger' && alarmOn){
+    // threat is no longer a collision risk -> turns green, rudder eases back
+    alarmOn=false;
+    alertCard.style.opacity='0';
+    alertCard.style.visibility='hidden';
+    if(collisionBanner) collisionBanner.classList.remove('on');
+    ownEvasiveTarget = 0; // rudder returns amidships once clear
+  }
+  // ease OWN heading toward the target turn (slowed for a smooth, readable maneuver)
+  ownEvasiveCurrent += (ownEvasiveTarget - ownEvasiveCurrent) * Math.min(1, dt*0.35);
+  setCompass(ownEvasiveCurrent);
+  if(alDeg) alDeg.textContent=(ownEvasiveCurrent>=0?'+':'')+Math.round(ownEvasiveCurrent)+'°';
+
+  // live CPA / TCPA readout while in danger
+  if(alarmOn){
+    const cpa=Math.max(0.05, (d/100)*3).toFixed(2);     // scaled to 3 nm range
+    const closing=Math.hypot(threat.vx,threat.vy);        // %/s
+    const tcpaSec=Math.max(0, Math.round((d/Math.max(closing,0.001))));
+    const mm=String(Math.floor(tcpaSec/60)).padStart(2,'0');
+    const ss=String(tcpaSec%60).padStart(2,'0');
+    if(alCpa) alCpa.textContent=cpa+' nm';
+    if(alTcpa) alTcpa.textContent=mm+':'+ss;
+  }
+
+  build();
+}
+
+build();
+window.addEventListener('resize',build);
+
+// --- phosphor radar on canvas: trail decays until the next sweep ---
+(function(){
+  const cv=document.getElementById('sweepCanvas');
+  const ctx=cv.getContext('2d');
+  let cx,cy,rad,dpr;
+  function resize(){
+    dpr=window.devicePixelRatio||1;
+    const s=scope.clientWidth;
+    cv.width=s*dpr;cv.height=s*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=s/2;cy=s/2;rad=s/2;
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  let angle=-Math.PI/2;
+  const speed=(Math.PI*2)/4000;
+  let last=performance.now();
+
+  function frame(now){
+    const dt=now-last;last=now;
+    const s=scope.clientWidth;
+
+    // advance target motion every frame
+    moveTargets(now);
+
+    ctx.globalCompositeOperation='destination-out';
+    ctx.fillStyle='rgba(0,0,0,0.06)';
+    ctx.fillRect(0,0,s,s);
+    ctx.globalCompositeOperation='source-over';
+
+    angle+=speed*dt;
+    if(angle>Math.PI*1.5) angle-=Math.PI*2;
+
+    const ex=cx+Math.cos(angle)*rad;
+    const ey=cy+Math.sin(angle)*rad;
+    const g=ctx.createLinearGradient(cx,cy,ex,ey);
+    g.addColorStop(0,'rgba(23,184,154,0.55)');
+    g.addColorStop(1,'rgba(23,184,154,0)');
+    ctx.strokeStyle=g;
+    ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
+
+    const trail=0.5;
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+    grad.addColorStop(0,'rgba(23,184,154,0.16)');
+    grad.addColorStop(1,'rgba(23,184,154,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,rad,angle-trail,angle);
+    ctx.closePath();ctx.fill();
+
+    // blips light up as the beam sweeps over their current position
+    const frameRot=-ownEvasiveCurrent*Math.PI/180;   // world rotates opposite to OWN's turn
+    vessels.forEach((v)=>{
+      if(v.own) return;
+      const s2=stateOf(v);
+      const ang2=Math.atan2(v.y,v.x)+frameRot;        // rotated into OWN's frame
+      let va=ang2;
+      while(va<angle-Math.PI) va+=Math.PI*2;
+      while(va>angle+Math.PI) va-=Math.PI*2;
+      const dd=Math.abs(va-angle);
+      const op=Math.max(0, 1 - dd/0.9);   // fade with angular distance from beam
+      if(op>0){
+        const dist=(Math.hypot(v.x,v.y)/100)*rad;
+        const bx=cx+Math.cos(ang2)*dist;
+        const by=cy+Math.sin(ang2)*dist;
+        const col=s2==='danger'?'255,107,92':s2==='warn'?'245,166,35':'23,184,154';
+        const r0=s2==='safe'?5:7;
+        ctx.beginPath();
+        ctx.fillStyle='rgba('+col+','+(op*0.9)+')';
+        ctx.arc(bx,by,r0,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle='rgba('+col+','+(op*0.25)+')';
+        ctx.arc(bx,by,r0+6*(1-op)+4,0,Math.PI*2);ctx.fill();
+      }
+    });
+
+    // OWN evasive course vector: shown ONLY during an active collision alarm
+    if(alarmOn && typeof ownEvasiveCurrent!=='undefined' && Math.abs(ownEvasiveCurrent)>0.5){
+      // OWN heads "up" (12 o'clock) by convention; evasive = rotated to starboard
+      const baseAng=-Math.PI/2;                      // up
+      const evAng=baseAng + ownEvasiveCurrent*Math.PI/180;
+      const vlen=rad*0.62;
+      const vx2=cx+Math.cos(evAng)*vlen;
+      const vy2=cy+Math.sin(evAng)*vlen;
+      // dashed original course (faint, straight up) for reference
+      ctx.save();
+      ctx.setLineDash([4,5]);
+      ctx.strokeStyle='rgba(124,170,200,0.35)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(baseAng)*vlen, cy+Math.sin(baseAng)*vlen);ctx.stroke();
+      ctx.restore();
+      // evasive vector (solid red, thin, glowing)
+      const vg=ctx.createLinearGradient(cx,cy,vx2,vy2);
+      vg.addColorStop(0,'rgba(255,107,92,0.95)');
+      vg.addColorStop(1,'rgba(255,107,92,0.5)');
+      ctx.strokeStyle=vg;
+      ctx.lineWidth=2;
+      ctx.shadowColor='rgba(255,107,92,0.9)';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(vx2,vy2);ctx.stroke();
+      // arrowhead
+      const ah=8;
+      ctx.fillStyle='rgba(255,107,92,1)';
+      ctx.beginPath();
+      ctx.moveTo(vx2,vy2);
+      ctx.lineTo(vx2-Math.cos(evAng-0.4)*ah, vy2-Math.sin(evAng-0.4)*ah);
+      ctx.lineTo(vx2-Math.cos(evAng+0.4)*ah, vy2-Math.sin(evAng+0.4)*ah);
+      ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;
+      // curved arrow hint between original and evasive course
+      ctx.strokeStyle='rgba(255,107,92,0.55)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.arc(cx,cy,vlen*0.5, baseAng, evAng, ownEvasiveCurrent<0);
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+// --- DUAL SCENARIO MINI-RADARS (reusable factory) ---
+function createMiniRadar(cfg){
+  const scope=document.getElementById(cfg.scopeId);
+  const cv=document.getElementById(cfg.canvasId);
+  const alertBox=document.getElementById(cfg.alertId);
+  const elHead=document.getElementById(cfg.headId);
+  const elContact=document.getElementById(cfg.contactId);
+  const elExtra=document.getElementById(cfg.extraId);   // CPA (A) — fixed for B
+  const elDeg=document.getElementById(cfg.degId);
+  const banner=cfg.bannerId?document.getElementById(cfg.bannerId):null;
+  const cTicks=cfg.ticksId?document.getElementById(cfg.ticksId):null;
+  const cPxPerDeg=2.4;
+  if(cTicks){
+    let html='';
+    for(let deg=-90;deg<=90;deg+=5){
+      const major=deg%30===0;
+      html+='<span class="tick'+(major?' major':'')+'" data-deg="'+deg+'"></span>';
+      if(major) html+='<span class="tnum" data-deg="'+deg+'">'+(deg>0?'+':'')+deg+'</span>';
+    }
+    cTicks.innerHTML=html;
+  }
+  function setMiniCompass(h){
+    if(!cTicks) return;
+    const tape=cTicks.parentElement, center=tape.clientWidth/2;
+    cTicks.querySelectorAll('.tick,.tnum').forEach(el=>{ el.style.left=(center+(+el.dataset.deg-h)*cPxPerDeg)+'px'; });
+  }
+  if(cTicks) setMiniCompass(0);
+  if(!scope||!cv) return;
+  const ctx=cv.getContext('2d');
+  let cx,cy,rad,dpr;
+  function resize(){
+    dpr=window.devicePixelRatio||1;
+    const s=scope.clientWidth;
+    cv.width=s*dpr;cv.height=s*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=s/2;cy=s/2;rad=s/2;
+  }
+  resize();window.addEventListener('resize',resize);
+
+  let own, target, tState, evCur, evTgt, alarmOn, extras;
+  function init(){
+    // OWN at center heading up; target defined by scenario
+    own={x:0,y:0};
+    extras=[];
+    if(cfg.mode==='vessel'){
+      // a ship on a converging course, like the hero radar
+      target={x:-38, y:-40, vx:2.7, vy:2.9, lab:cfg.targetLabel, kind:'vessel'};
+      // surrounding safe traffic: scattered, tangential drift, never closing in
+      const seed=[[52,-30],[-56,16],[40,46],[60,8],[-30,54],[22,-58],[-60,-14]];
+      const labs=['CG-04','FV-12','TK-77','','SY-31','',''];
+      extras=seed.map((p,i)=>{
+        const x=p[0],y=p[1],dd=Math.hypot(x,y)||1;
+        const tx=-y/dd, ty=x/dd, dir=Math.random()<0.5?1:-1, sp=0.9+Math.random()*1.3;
+        const jit=(Math.random()-0.5)*0.5, nx=x/dd, ny=y/dd;
+        return {x,y,vx:(tx*dir+nx*jit)*sp,vy:(ty*dir+ny*jit)*sp,lab:labs[i]};
+      });
+    } else {
+      // OWN starts at world origin heading up; the container is fixed in the
+      // world directly ahead (negative y = up) at the starting range.
+      own={x:0,y:0,wx:0,wy:0,hdg:0};
+      target={x:0, y:-62, wx:0, wy:-62, lab:cfg.targetLabel, kind:'obj', range:62};
+    }
+    tState='safe'; evCur=0; evTgt=0; alarmOn=false; target.evading=false;
+  }
+  init();
+
+  function classify(d){
+    if(cfg.mode==='vessel'){ if(d<30)return'danger'; if(d<44)return'warn'; }
+    else { if(d<26)return'danger'; if(d<42)return'warn'; }
+    return 'safe';
+  }
+
+  function render(){
+    scope.querySelectorAll('.vessel,.threat,.label').forEach(e=>e.remove());
+    const size=scope.clientWidth, ccx=size/2, ccy=size/2, r=size/2;
+    // OWN
+    const ownEl=document.createElement('div');
+    ownEl.className='vessel own v-safe';
+    ownEl.style.left=ccx+'px';ownEl.style.top=ccy+'px';
+    ownEl.style.transform='translate(-50%,-50%) rotate('+evCur+'deg)';
+    ownEl.innerHTML='<div class="hull"></div>';
+    scope.appendChild(ownEl);
+    const ownLab=document.createElement('div');
+    ownLab.className='label v-safe';ownLab.style.left=ccx+'px';ownLab.style.top=(ccy-20)+'px';
+    ownLab.style.color='var(--teal)';ownLab.textContent='OWN';scope.appendChild(ownLab);
+    // surrounding safe traffic (vessel scenario only)
+    if(extras){
+      extras.forEach(v=>{
+        const ex=ccx+(v.x/100)*r, ey=ccy+(v.y/100)*r;
+        const el=document.createElement('div');
+        el.className='vessel v-safe';
+        el.style.left=ex+'px';el.style.top=ey+'px';
+        el.style.transform='translate(-50%,-50%) rotate('+(Math.atan2(v.vy,v.vx)*180/Math.PI+90)+'deg)';
+        el.innerHTML='<div class="hull"></div>';
+        scope.appendChild(el);
+        if(v.lab){
+          const l=document.createElement('div');
+          l.className='label v-safe';l.style.left=ex+'px';l.style.top=(ey-20)+'px';
+          l.style.color='var(--teal)';l.textContent=v.lab;scope.appendChild(l);
+        }
+      });
+    }
+    // target
+    const d=Math.hypot(target.x,target.y);
+    const st=classify(d);
+    const tx=ccx+(target.x/100)*r, ty=ccy+(target.y/100)*r;
+    if(st==='danger'||st==='warn'){
+      const t=document.createElement('div');
+      t.className='threat'+(st==='warn'?' warn':'');
+      const len=Math.hypot(tx-ccx,ty-ccy);
+      const deg=Math.atan2(ty-ccy,tx-ccx)*180/Math.PI;
+      t.style.width=len+'px';t.style.transform='rotate('+deg+'deg)';
+      scope.appendChild(t);
+    }
+    const tEl=document.createElement('div');
+    tEl.className='vessel '+(target.kind==='obj'?'obj ':'')+'v-'+st;
+    tEl.style.left=tx+'px';tEl.style.top=ty+'px';
+    if(target.kind==='obj' && target.passed){ tEl.style.opacity=Math.max(0,target.vanish); }
+    const hd= target.kind==='obj' ? 0 : (Math.atan2(target.vy,target.vx)*180/Math.PI+90);
+    tEl.style.transform='translate(-50%,-50%) rotate('+hd+'deg)';
+    tEl.innerHTML='<div class="hull"></div>';
+    scope.appendChild(tEl);
+    const tLab=document.createElement('div');
+    tLab.className='label v-'+st;tLab.style.left=tx+'px';tLab.style.top=(ty-20)+'px';
+    tLab.style.color=st==='danger'?'var(--coral)':st==='warn'?'var(--amber)':(target.kind==='obj'?'var(--amber)':'var(--teal)');
+    if(target.kind==='obj' && target.passed){ tLab.style.opacity=Math.max(0,target.vanish); }
+    tLab.textContent=target.lab;scope.appendChild(tLab);
+  }
+
+  let lastM=performance.now();
+  function update(now){
+    const dt=(now-lastM)/1000; lastM=now;
+    // --- target motion (per scenario) ---
+    if(cfg.mode==='vessel'){
+      target.x+=target.vx*dt; target.y+=target.vy*dt;
+      // move surrounding safe traffic (reflective containment, scattered)
+      if(extras){
+        extras.forEach(v=>{
+          v.x+=v.vx*dt; v.y+=v.vy*dt;
+          const dd=Math.hypot(v.x,v.y)||0.001, nx=v.x/dd, ny=v.y/dd;
+          if(dd>66){ const dot=v.vx*nx+v.vy*ny; v.vx-=2*dot*nx; v.vy-=2*dot*ny; }
+          if(dd<28){ const dot=v.vx*nx+v.vy*ny; if(dot<0){ v.vx-=2*dot*nx; v.vy-=2*dot*ny; } }
+        });
+      }
+    } else {
+      // REAL relative motion. The container is fixed in the world. OWN advances
+      // and turns to starboard, then HOLDS the new course. On a heading-up radar
+      // the object is plotted in OWN's frame (world-relative position rotated by
+      // -heading). Because OWN holds a steady heading once turned, the still
+      // object tracks a straight line exactly opposite OWN's motion vector:
+      // it slides aft and never curves back.
+      const sp=9;                               // OWN speed (units/s) — slowed to match the hero radar pace
+      // OWN heading locks onto the largest evasive angle reached this cycle and
+      // holds it while the object is still abeam/ahead. Once the object has
+      // passed astern, OWN eases the rudder back: heading returns toward 0 so
+      // the red vector swings slowly back onto the original course, then clears.
+      if(target.y>0 && evCur<2){ target.clearing=true; }   // object now astern & alarm gone
+      if(target.clearing){
+        own.hdg += (0 - own.hdg)*Math.min(1, dt*0.7);       // ease heading back to straight
+      } else {
+        own.hdg = Math.max(own.hdg||0, evCur*Math.PI/180);
+      }
+      const hdg=own.hdg;
+      // advance OWN in the world along its (held) heading
+      own.wx += Math.sin(hdg)*sp*dt;
+      own.wy -= Math.cos(hdg)*sp*dt;            // up is negative y
+      // object position relative to OWN, rotated into the heading-up frame
+      const rx=target.wx-own.wx, ry=target.wy-own.wy;
+      const c=Math.cos(-hdg), s=Math.sin(-hdg);
+      target.x = rx*c - ry*s;
+      target.y = rx*s + ry*c;
+      target.range=Math.hypot(target.x,target.y);
+      // once the object has drifted well astern/away, recycle
+      if(target.y>58 || target.range>72){
+        if(target.pause===undefined) target.pause=1.0;
+        target.pause-=dt;
+        if(alarmOn){ alarmOn=false;
+          if(alertBox){ if(cfg.heroStyle){alertBox.style.opacity='0';alertBox.style.visibility='hidden';} else alertBox.classList.remove('on'); }
+          if(banner) banner.classList.remove('on');
+          if(elHead)elHead.textContent='Monitoring'; if(elContact && !cfg.heroStyle)elContact.textContent='—'; evTgt=0; }
+        if(target.pause<=0){ init(); return; }
+      }
+    }
+    const d= cfg.mode==='vessel' ? Math.hypot(target.x,target.y) : target.range;
+
+    // closest approach -> evasive maneuver (vessel mode steers away & clears)
+    if(cfg.mode==='vessel' && d<12 && !target.evading){
+      target.evading=true;
+      const outAng=Math.atan2(target.y,target.x);
+      const sp=Math.hypot(target.vx,target.vy)*1.15;
+      target.vx=Math.cos(outAng)*sp; target.vy=Math.sin(outAng)*sp;
+    }
+    // vessel mode recycles by distance; object mode recycles via the fade above
+    if(cfg.mode==='vessel' && target.evading && d>52){ init(); }
+
+    const st=classify(d);
+    if(st==='danger' && !alarmOn){
+      alarmOn=true;
+      if(alertBox){
+        if(cfg.heroStyle){ alertBox.style.visibility='visible'; alertBox.style.opacity='1'; }
+        else alertBox.classList.add('on');
+      }
+      if(banner) banner.classList.add('on');
+      if(elHead) elHead.textContent='Collision risk';
+      if(elContact) elContact.textContent=target.lab;
+      evTgt = cfg.mode==='vessel' ? (38+Math.round(Math.random()*18)) : (28+Math.round(Math.random()*14));
+      evCur=0;
+    } else if(st!=='danger' && alarmOn){
+      alarmOn=false;
+      if(alertBox){
+        if(cfg.heroStyle){ alertBox.style.opacity='0'; alertBox.style.visibility='hidden'; }
+        else alertBox.classList.remove('on');
+      }
+      if(banner) banner.classList.remove('on');
+      if(elHead) elHead.textContent='Monitoring';
+      if(elContact && !cfg.heroStyle) elContact.textContent='—';
+      if(cfg.mode==='vessel' && elExtra) elExtra.textContent='—';
+      evTgt=0;
+    }
+    evCur += (evTgt-evCur)*Math.min(1,dt*0.9);
+    if(cTicks) setMiniCompass(evCur);
+    if(elDeg) elDeg.textContent=(evCur>=0?'+':'')+Math.round(evCur)+'°';
+    if(alarmOn && cfg.mode==='vessel' && elExtra){
+      elExtra.textContent=Math.max(0.05,(d/100)*3).toFixed(2)+' nm';
+    }
+    render();
+  }
+
+  let ang=-Math.PI/2; const spd=(Math.PI*2)/4000; let last=performance.now();
+  function frame(now){
+    const dt=now-last; last=now;
+    const s=scope.clientWidth;
+    update(now);
+    ctx.globalCompositeOperation='destination-out';
+    ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fillRect(0,0,s,s);
+    ctx.globalCompositeOperation='source-over';
+    ang+=spd*dt; if(ang>Math.PI*1.5)ang-=Math.PI*2;
+    const ex=cx+Math.cos(ang)*rad, ey=cy+Math.sin(ang)*rad;
+    const g=ctx.createLinearGradient(cx,cy,ex,ey);
+    g.addColorStop(0,'rgba(23,184,154,0.5)');g.addColorStop(1,'rgba(23,184,154,0)');
+    ctx.strokeStyle=g;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+    grad.addColorStop(0,'rgba(23,184,154,0.14)');grad.addColorStop(1,'rgba(23,184,154,0)');
+    ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,rad,ang-0.5,ang);ctx.closePath();ctx.fill();
+    // OWN evasive vector (thin red) when maneuvering / holding evasive course
+    const showAng = (cfg.mode==='object' && own && own.hdg) ? own.hdg*180/Math.PI : evCur;
+    if(Math.abs(showAng)>0.5){
+      const base=-Math.PI/2, eA=base+showAng*Math.PI/180, vl=rad*0.6;
+      const vx2=cx+Math.cos(eA)*vl, vy2=cy+Math.sin(eA)*vl;
+      ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(124,170,200,0.35)';ctx.lineWidth=1.4;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(base)*vl,cy+Math.sin(base)*vl);ctx.stroke();ctx.restore();
+      ctx.strokeStyle='rgba(255,107,92,0.9)';ctx.lineWidth=2;ctx.shadowColor='rgba(255,107,92,0.9)';ctx.shadowBlur=7;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(vx2,vy2);ctx.stroke();
+      const ah=7;ctx.fillStyle='rgba(255,107,92,1)';ctx.beginPath();ctx.moveTo(vx2,vy2);
+      ctx.lineTo(vx2-Math.cos(eA-0.4)*ah,vy2-Math.sin(eA-0.4)*ah);
+      ctx.lineTo(vx2-Math.cos(eA+0.4)*ah,vy2-Math.sin(eA+0.4)*ah);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+createMiniRadar({mode:'object', scopeId:'scopeB', canvasId:'canvasB', alertId:'alertCardB',
+  headId:null, contactId:'alContactB', extraId:null, degId:'alDegB', targetLabel:'CONTAINER',
+  heroStyle:true, bannerId:'collisionBannerB', ticksId:'compassTicksB'});
+
+// --- scroll reveal (con fallback di sicurezza) ---
+(function(){
+  var nodes=document.querySelectorAll('.reveal');
+  function revealAll(){for(var i=0;i<nodes.length;i++)nodes[i].classList.add('in');}
+  // Browser senza IntersectionObserver: mostra tutto subito
+  if(!('IntersectionObserver' in window)){revealAll();return;}
+  try{
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e,i){if(e.isIntersecting){setTimeout(function(){e.target.classList.add('in')},i*70);io.unobserve(e.target)}})
+    },{threshold:.15});
+    nodes.forEach(function(e){io.observe(e)});
+    // Rete di sicurezza: se per qualunque motivo qualcosa resta nascosto, rivelalo
+    setTimeout(function(){
+      for(var i=0;i<nodes.length;i++){
+        var r=nodes[i].getBoundingClientRect();
+        if(r.top<window.innerHeight && !nodes[i].classList.contains('in'))nodes[i].classList.add('in');
+      }
+    },1500);
+  }catch(err){revealAll();}
+})();
+
+</script>
+</body>
+</html>
